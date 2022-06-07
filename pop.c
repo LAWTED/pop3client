@@ -5,34 +5,241 @@
 #include <unistd.h>
 #include <netdb.h>
 #include <stdlib.h>
-// PASS VPHCBMGOEYSSIRLW
+#include <stdio.h>
+#include <b64/cencode.h>
+#include <b64/cdecode.h>
 
-// clear screen
+// PASS VPHCBMGOEYSSIRLW
+#define SIZE 100
+
+#define RED "\x1B[31m"
+#define GRN "\x1B[32m"
+#define YEL "\x1B[33m"
+#define BLU "\x1B[34m"
+#define MAG "\x1B[35m"
+#define CYN "\x1B[36m"
+#define WHT "\x1B[37m"
+#define RESET "\x1B[0m"
+void go_back(int sockfd);
+
 void clrscr()
 {
   system("@cls||clear");
 }
-// print the menu of pop3client
-int menu()
+
+char* send_command(int sockfd,char* command) {
+  char buf[1000000];
+  memset(buf, 0, sizeof(buf));
+  write(sockfd, command, strlen(command));
+  read(sockfd, buf, sizeof(buf));
+  char * ret = malloc(strlen(buf) + 1);
+  strcpy(ret, buf);
+  return ret;
+}
+
+void get_user(int sockfd) {
+  char command[1024] = "USER ";
+  char tmp[1024];
+  printf("Enter your username: ");
+  scanf("%s", tmp);
+  strcat(tmp, "\r\n");
+  strcat(command, tmp);
+  send_command(sockfd, command);
+  memset(command, 0, sizeof(command));
+}
+
+void get_pass(int sockfd) {
+  char command[1024] = "PASS ";
+  char tmp[1024];
+  char* password = getpass("Enter your password: ");
+  strcpy(tmp, password);
+  strcat(tmp, "\r\n");
+  strcat(command, tmp);
+  send_command(sockfd, command);
+  memset(command, 0, sizeof(command));
+}
+
+void test_get_user(int sockfd) {
+  send_command(sockfd, "USER lawted0605\r\n");
+}
+
+void test_get_pass(int sockfd) {
+  send_command(sockfd, "PASS VPHCBMGOEYSSIRLW\r\n");
+}
+
+void get_list(int sockfd) {
+  char command[1024] = "LIST\r\n";
+  char* msg = send_command(sockfd, command);
+  printf("%s", msg);
+  memset(command, 0, sizeof(command));
+  go_back(sockfd);
+}
+
+void get_stat(int sockfd) {
+  char command[1024] = "STAT\r\n";
+  char* msg = send_command(sockfd, command);
+  printf("%s\n", msg);
+  memset(command, 0, sizeof(command));
+  go_back(sockfd);
+}
+
+char* decode(const char* input)
+{
+	/* set up a destination buffer large enough to hold the encoded data */
+	char* output = (char*)malloc(SIZE);
+	/* keep track of our decoded position */
+	char* c = output;
+	/* store the number of bytes decoded by a single call */
+	int cnt = 0;
+	/* we need a decoder state */
+	base64_decodestate s;
+
+	/*---------- START DECODING ----------*/
+	/* initialise the decoder state */
+	base64_init_decodestate(&s);
+	/* decode the input data */
+	cnt = base64_decode_block(input, strlen(input), c, &s);
+	c += cnt;
+	/* note: there is no base64_decode_blockend! */
+	/*---------- STOP DECODING  ----------*/
+
+	/* we want to print the decoded data, so null-terminate it: */
+	*c = 0;
+
+	return output;
+}
+
+
+void get_retr(int sockfd) {
+  char command[1024] = "RETR ";
+  char file_num[1024];
+  printf("Enter the file index: ");
+  scanf("%s", file_num);
+  strcat(command, file_num);
+  strcat(command, "\r\n");
+  char* msg = send_command(sockfd, command);
+  printf("%s\n", msg);
+  // char * p, * tmp;
+  // p = strtok_r(msg, "\n", &tmp);
+  // int flag = 0;
+  // do {
+  //   if (flag) {
+  //     p = decode(p);
+  //   }
+  //   if (p[1] == '\n') {
+  //     flag = 1;
+  //   }
+  //   printf("%s\n", p);
+  // } while ((p = strtok_r(NULL, "\n", &tmp)) != NULL);
+  memset(command, 0, sizeof(command));
+  go_back(sockfd);
+}
+
+void save_file(char* str, char* filename) {
+  FILE *fp;
+  fp = fopen(filename, "w");
+  fprintf(fp, "%s", str);
+  fclose(fp);
+}
+
+void download(int sockfd) {
+  char command[1024] = "RETR ";
+  char file_num[1024];
+  printf("Enter the file index: ");
+  scanf("%s", file_num);
+  strcat(command, file_num);
+  strcat(command, "\r\n");
+  char* msg = send_command(sockfd, command);
+  save_file(msg, strcat(file_num, ".eml"));
+  memset(command, 0, sizeof(command));
+  char command2[1024] = "DELE ";
+  strcat(command2, file_num);
+  strcat(command2, "\r\n");
+  send_command(sockfd, command2);
+  go_back(sockfd);
+}
+
+void search(int sockfd) {
+
+}
+
+void menu(int sockfd)
 {
   int choice;
   printf("********************************************************\n");
-  printf("1. Quit\n");
+  printf(RED "1. Quit\n" RESET);
   printf("2. Get a list of messages and size\n");
   printf("3. Get mail status\n");
   printf("4. Display a message in detail\n");
-  printf("5. Search text in all mails");
-  printf("6. Display by subject\n");
+  printf("5. Search text in all mails<not valid>\n");
+  printf("6. Display by subject<not valid>\n");
   printf("7. Download the email\n");
   printf("********************************************************\n");
   printf("Please enter your choice: \n");
   printf(">>");
   scanf("%d", &choice);
-  return choice;
+
+  switch (choice)
+  {
+  case 1:
+    printf("Quit\n");
+    exit(0);
+    break;
+  case 2:
+    printf("Get a list of messages and size\n");
+    printf(GRN "********************************************************\n" RESET);
+    get_list(sockfd);
+    break;
+  case 3:
+    printf("Get mail status\n");
+    printf(GRN "********************************************************\n" RESET);
+    get_stat(sockfd);
+    break;
+  case 4:
+    printf("Display a message in detail\n");
+    printf(GRN "********************************************************\n" RESET);
+    get_retr(sockfd);
+    break;
+  case 5:
+    printf("Search text in all mails");
+    search(sockfd);
+    break;
+  case 6:
+    printf("Display by subject");
+
+    break;
+  case 7:
+    printf("Download the email\n");
+    printf(GRN "********************************************************\n" RESET);
+    download(sockfd);
+    break;
+  }
 }
+
+void go_back(int sockfd) {
+  int choice;
+  printf(GRN "********************************************************\n" RESET);
+  printf(RED "1.Quit\n" RESET);
+  printf("2.Back to Menu\n");
+  printf("Please enter your choice: \n");
+  printf(">>");
+  scanf("%d", &choice);
+  switch (choice)
+  {
+  case 1:
+    exit(0);
+  case 2:
+    clrscr();
+    menu(sockfd);
+    break;
+  }
+}
+
+
 
 int main()
 {
+  char buf[1024];
   printf("Welecom to pop3 client\n");
   // send message by socket
   int sockfd = socket(AF_INET, SOCK_STREAM, 0);
@@ -44,7 +251,7 @@ int main()
   }
   servaddr.sin_family = AF_INET;
   servaddr.sin_port = htons(110);
-  // gethostbyname() returns a structure of type hostent
+
   struct hostent *host = gethostbyname("pop.163.com");
   if (host == NULL)
   {
@@ -54,39 +261,24 @@ int main()
   printf("address: %s\n", inet_ntoa(*(struct in_addr *)host->h_addr));
   servaddr.sin_addr.s_addr = inet_addr(inet_ntoa(*(struct in_addr *)host->h_addr));
   int i = connect(sockfd, (struct sockaddr *)&servaddr, sizeof(servaddr));
+  read(sockfd, buf, sizeof(buf));
+  memset(buf, 0, sizeof(buf));
   if (i < 0)
   {
     printf("connect error\n");
     return 1;
   }
-  char buf[1024];
-  char tmp[1024];
-  memset(buf, 0, sizeof(buf));
-  read(sockfd, buf, sizeof(buf));
-  printf("\nUSER: ");
-  scanf("%s", tmp);
-  strcat(tmp, "\r\n");
 
-  memset(buf, 0, sizeof(buf));
-  strcpy(buf, "USER ");
-  strcat(buf, tmp);
-  write(sockfd, buf, strlen(buf));
-  memset(buf, 0, sizeof(buf));
-  read(sockfd, buf, sizeof(buf));
-  printf("\nPASS: ");
-  scanf("%s", tmp);
-  strcat(tmp, "\r\n");
+  printf("Socket Connected\n");
 
-  memset(buf, 0, sizeof(buf));
-  strcpy(buf, "PASS ");
-  strcat(buf, tmp);
-  write(sockfd, buf, strlen(buf));
-  memset(buf, 0, sizeof(buf));
-  read(sockfd, buf, sizeof(buf));
-  printf("\nLogin Sucessful\n");
-  // printf("\n%s", buf);
-  sleep(1);
-  clrscr();
-  int choice = menu();
+  get_user(sockfd);
+  get_pass(sockfd);
+
+
+  // test_get_user(sockfd);
+  // test_get_pass(sockfd);
+
+  // clrscr();
+  menu(sockfd);
   return 0;
 }

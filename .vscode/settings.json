@@ -1,3 +1,10 @@
 {
-  "C_Cpp.errorSquiggles": "Enabled"
+  "C_Cpp.errorSquiggles": "Enabled",
+  "files.associations": {
+    "*.html": "html",
+    "b64.h": "c",
+    "stdlib.h": "c",
+    "socket.h": "c",
+    "unistd.h": "c"
+  }
 }
