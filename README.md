@@ -8,7 +8,7 @@ this is a pop3 client by C
 
 ```
 linux
-libb64
+libb64 !important
 ```
 
 ## run 🏃
