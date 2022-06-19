@@ -247,7 +247,7 @@ void menu(int sockfd)
   printf("3. Get mail status\n");
   printf("4. Display a message in detail\n");
   printf("5. Search text in all mails<not valid>\n");
-  printf("6. Display by subject<not valid>\n");
+  printf("6. Display by subject\n");
   printf("7. Download the email\n");
   printf("********************************************************\n");
   printf("Please enter your choice: \n");
